@@ -4,3 +4,5 @@ python-dotenv
 python-jose
 passlib[bcrypt]
 pymongo
+pydantic[email]
+email-validator
