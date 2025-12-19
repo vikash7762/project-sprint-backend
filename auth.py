@@ -3,11 +3,48 @@ from datetime import datetime, timedelta
 from random import randint
 from pydantic import BaseModel
 
+import os
+import smtplib
+from email.message import EmailMessage
+
 from database import otps_collection, users_collection
 from models import SignupPayload, SendOtpPayload
 from security import create_access_token
 
 router = APIRouter()
+
+# -------- Email config --------
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASS = os.getenv("SMTP_PASS")
+EMAIL_FROM = os.getenv("EMAIL_FROM", SMTP_USER)
+
+
+def send_otp_email(to_email: str, code: str):
+    """
+    Send OTP to user via SMTP.
+    """
+    if not all([SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM]):
+        # Fail fast if email is not configured
+        print("Email config missing, cannot send OTP email")
+        return
+
+    msg = EmailMessage()
+    msg["Subject"] = "Your Project Sprint OTP code"
+    msg["From"] = EMAIL_FROM
+    msg["To"] = to_email
+    msg.set_content(f"Your OTP code is {code}. It will expire in 10 minutes.")
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.send_message(msg)
+        print(f"OTP email sent to {to_email}")
+    except Exception as e:
+        # Do not break the API if email fails; just log the error
+        print("Error sending OTP email:", repr(e))
 
 
 class SendOtpRequest(BaseModel):
@@ -34,7 +71,10 @@ async def send_otp(payload: SendOtpRequest):
     print("send_otp endpoint hit")
     print(f"OTP for {identifier}: {otp}")
 
-    return {"message": "OTP generated (check server console in dev)"}
+    # NEW: actually send the email
+    send_otp_email(identifier, otp)
+
+    return {"message": "OTP generated and email (attempted) to be sent"}
 
 
 @router.post("/verify-otp")
