@@ -17,6 +17,8 @@ api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://project-sprint-git-main-vikashs-projects-0ce96fec.vercel.app",
+    "https://project-sprint-delta.vercel.app",
 ]
 
 app.add_middleware(
